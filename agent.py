@@ -12,7 +12,7 @@ def call_model(conversation: list):
     """One API call: full conversation + tool schemas -> text answer or tool_use request."""
     return client.messages.create(
         model=settings.model_name,
-        max_tokens=8192,
+        max_tokens=settings.max_response_tokens,
         system=SYSTEM_PROMPT,
         messages=conversation,
         tools=TOOL_SCHEMAS,
