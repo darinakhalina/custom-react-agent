@@ -1,15 +1,11 @@
 from pathlib import Path
 
 from ddgs import DDGS
-from langchain_core.tools import tool
 import trafilatura
 
 from config import settings
 
 
-# @tool marks a function as a TOOL for the agent:
-# Claude sees its name and docstring and can call it on its own.
-@tool
 def write_report(filename: str, content: str) -> str:
     """Save a Markdown report to the output directory. Returns the file path."""
     try:
@@ -27,12 +23,31 @@ def write_report(filename: str, content: str) -> str:
         return f"Failed to write report: {e}"
 
 
-@tool
-def web_search(query: str) -> str:
-    """Search the web and return top results (title, URL, snippet).
+write_report_schema = {
+    "name": "write_report",
+    "description": (
+        "Save the final Markdown report to a file in the output directory. "
+        "Returns the saved file path."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "filename": {
+                "type": "string",
+                "description": "Short descriptive file name, e.g. 'rag-comparison.md'",
+            },
+            "content": {
+                "type": "string",
+                "description": "The full Markdown report text",
+            },
+        },
+        "required": ["filename", "content"],
+    },
+}
 
-    Snippets are short, not full pages — use read_url to read a page in full.
-    """
+
+def web_search(query: str) -> str:
+    """Search the web and return top results (title, URL, snippet)."""
     try:
         # query DuckDuckGo and take the top 5 results
         # (results = list of dicts with keys title / href / body)
@@ -51,7 +66,24 @@ def web_search(query: str) -> str:
         return f"Search failed for '{query}': {e}"
 
 
-@tool
+# JSON Schema for the tool calling API: what @tool used to build from
+# the function signature and docstring, we now declare explicitly.
+web_search_schema = {
+    "name": "web_search",
+    "description": (
+        "Search the web and return top results (title, URL, snippet). "
+        "Snippets are short, not full pages — use read_url to read a page in full."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "The search query"},
+        },
+        "required": ["query"],
+    },
+}
+
+
 def read_url(url: str) -> str:
     """Fetch the main text of a web page (use after web_search to read it in full)."""
     try:
@@ -69,3 +101,32 @@ def read_url(url: str) -> str:
         return text
     except Exception as e:
         return f"Failed to read '{url}': {e}"
+
+
+read_url_schema = {
+    "name": "read_url",
+    "description": (
+        "Fetch the main text of a web page. "
+        "Use after web_search to read a promising page in full. "
+        "Long pages are trimmed to fit the context window."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "url": {"type": "string", "description": "The page URL to read"},
+        },
+        "required": ["url"],
+    },
+}
+
+
+# what we hand to the API on every call: all tool definitions
+TOOL_SCHEMAS = [web_search_schema, read_url_schema, write_report_schema]
+
+# tool registry: maps a tool name from the model's response
+# to the actual Python function our loop should execute
+TOOL_REGISTRY = {
+    "web_search": web_search,
+    "read_url": read_url,
+    "write_report": write_report,
+}
