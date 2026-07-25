@@ -9,12 +9,7 @@ client = Anthropic()
 
 
 def call_model(conversation: list):
-    """One call to Claude: send the whole conversation + the tool menu.
-
-    The API is stateless — it remembers nothing between calls — so we
-    pass the full message history every time. The reply is either a text
-    answer or a request to call one of our tools.
-    """
+    """One API call: full conversation + tool schemas -> text answer or tool_use request."""
     return client.messages.create(
         model=settings.model_name,
         max_tokens=8192,
