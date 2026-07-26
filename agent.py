@@ -47,11 +47,14 @@ def run_agent(conversation: list) -> str:
         for block in response.content:
             if block.type != "tool_use":
                 continue  # skip thinking/text blocks
+            args = ", ".join(f'{k}={str(v)[:60]!r}' for k, v in block.input.items())
+            print(f"🔧 Tool call: {block.name}({args})")
             func = TOOL_REGISTRY.get(block.name)  # name from the schema -> our function
             if func is None:
                 output = f"Unknown tool: {block.name}"  # typo protection, don't crash
             else:
                 output = func(**block.input)  # run the real Python function
+            print(f"📎 Result: {output[:120]}...\n")
             results.append({
                 "type": "tool_result",
                 "tool_use_id": block.id,  # which request this answers

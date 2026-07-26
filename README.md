@@ -10,6 +10,18 @@ the LangChain agent is replaced with a custom loop built directly on the
 Anthropic API — tools as JSON Schema, manual message history, manual tool
 dispatch.
 
+## How the loop works
+
+```
+1. send the conversation + tool schemas to the API
+2. stop_reason == "tool_use"?  no -> return the final text answer
+3. for each tool_use block: TOOL_REGISTRY[name](**input) -> tool_result
+4. append the model's reply and the results to the conversation, go to 1
+   (at most max_iterations rounds)
+```
+
+Every step is logged to the console: `🔧 Tool call: ...` / `📎 Result: ...`.
+
 ## Tools
 
 - `web_search` — DuckDuckGo search (no API key)
