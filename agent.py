@@ -1,7 +1,7 @@
 from anthropic import Anthropic
 
 from config import settings, SYSTEM_PROMPT
-from tools import TOOL_SCHEMAS
+from tools import TOOL_SCHEMAS, TOOL_REGISTRY
 
 # direct API client — the "phone line" to Claude (no framework);
 # the API key is read from the environment (config.py puts it there)
@@ -39,7 +39,26 @@ def run_agent(conversation: list) -> str:
         if response.stop_reason != "tool_use":
             return response_text(response)
 
-        # TODO (next step): execute the requested tools via TOOL_REGISTRY
-        # and append the results to the conversation
+        # the model's reply (with its tool requests) goes into the history first
+        conversation.append({"role": "assistant", "content": response.content})
+
+        # execute every requested tool and collect the results
+        results = []
+        for block in response.content:
+            if block.type != "tool_use":
+                continue  # skip thinking/text blocks
+            func = TOOL_REGISTRY.get(block.name)  # name from the schema -> our function
+            if func is None:
+                output = f"Unknown tool: {block.name}"  # typo protection, don't crash
+            else:
+                output = func(**block.input)  # run the real Python function
+            results.append({
+                "type": "tool_result",
+                "tool_use_id": block.id,  # which request this answers
+                "content": output,
+            })
+
+        # hand the results back to the model on the next loop iteration
+        conversation.append({"role": "user", "content": results})
 
     return "Stopped: reached the iteration limit without a final answer."
