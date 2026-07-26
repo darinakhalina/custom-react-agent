@@ -22,6 +22,14 @@ dispatch.
 
 Every step is logged to the console: `🔧 Tool call: ...` / `📎 Result: ...`.
 
+## System prompt
+
+The prompt in `config.py` is structured as five sections — Identity,
+Capabilities, Goals, Constraints, Output Format — and describes the ReAct
+cycle (Thought → Action → Observe) with one worked few-shot example.
+Constraints are specific and positive (tool whitelist, step budget,
+"cite only URLs you actually opened").
+
 ## Tools
 
 - `web_search` — DuckDuckGo search (no API key)
