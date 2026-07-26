@@ -76,3 +76,20 @@ in `example_output/report.md`.
 | `agent.py` | Custom ReAct loop: send → parse tool calls → execute → repeat |
 | `tools.py` | Tool implementations + JSON Schema definitions |
 | `config.py` | Settings + system prompt |
+
+## Demo
+
+A full session: a research question, then follow-ups that rely on conversation
+memory ("which of these...", "those two...") — no framework, just the loop.
+
+![Research question and step-by-step tool call log](demo/1.png)
+
+![Multi-step research: searches and full page reads](demo/2.png)
+
+![First report saved; follow-up question answered via memory](demo/3.png)
+
+![Second follow-up: the agent resolves "those two" from earlier answers](demo/4.png)
+
+![Ticket prices and first-timer research](demo/5.png)
+
+![Final recommendation and generated reports in output/](demo/6.png)
