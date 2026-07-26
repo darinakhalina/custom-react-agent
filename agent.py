@@ -3,9 +3,8 @@ from anthropic import Anthropic
 from config import settings, SYSTEM_PROMPT
 from tools import TOOL_SCHEMAS, TOOL_REGISTRY
 
-# direct API client — the "phone line" to Claude (no framework);
-# the API key is read from the environment (config.py puts it there)
-client = Anthropic()
+# direct API client — the "phone line" to Claude (no framework)
+client = Anthropic(api_key=settings.anthropic_api_key.get_secret_value())
 
 
 def call_model(conversation: list):
@@ -53,8 +52,14 @@ def run_agent(conversation: list) -> str:
             if func is None:
                 output = f"Unknown tool: {block.name}"  # typo protection, don't crash
             else:
-                output = func(**block.input)  # run the real Python function
-            print(f"📎 Result: {output[:120]}...\n")
+                try:
+                    output = func(**block.input)  # run the real Python function
+                except Exception as e:
+                    # bad arguments from the model must not crash the agent —
+                    # return the error so it can retry differently
+                    output = f"Tool {block.name} failed: {e}"
+            preview = output[:120] + ("..." if len(output) > 120 else "")
+            print(f"📎 Result: {preview}\n")
             results.append({
                 "type": "tool_result",
                 "tool_use_id": block.id,  # which request this answers

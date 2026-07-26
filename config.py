@@ -1,5 +1,3 @@
-import os
-
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -18,11 +16,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
-# expose the key to the environment so LangChain's model factory can find it
-os.environ.setdefault(
-    "ANTHROPIC_API_KEY", settings.anthropic_api_key.get_secret_value()
-)
 
 
 # SYSTEM_PROMPT techniques:
