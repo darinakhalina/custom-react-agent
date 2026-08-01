@@ -2,8 +2,14 @@ from pathlib import Path
 
 from ddgs import DDGS
 import trafilatura
+from trafilatura.settings import use_config
 
 from config import settings
+
+# trafilatura has no timeout by default, which lets a hanging page stall
+# the whole agent loop — cap it explicitly
+_fetch_config = use_config()
+_fetch_config.set("DEFAULT", "DOWNLOAD_TIMEOUT", "10")
 
 
 def write_report(filename: str, content: str) -> str:
@@ -12,11 +18,17 @@ def write_report(filename: str, content: str) -> str:
         # make sure the output folder exists (create it if not)
         output_dir = Path(settings.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
+        # strip any directory components (e.g. "../../notes.md") so the file
+        # can't be written outside output_dir
+        filename = Path(filename).name
         # ensure the file ends with .md
         if not filename.endswith(".md"):
             filename += ".md"
-        # write the report text into the file
         path = output_dir / filename
+        # belt-and-suspenders: confirm the resolved path is still inside output_dir
+        if output_dir.resolve() not in path.resolve().parents:
+            return f"Invalid filename: {filename}"
+        # write the report text into the file
         path.write_text(content, encoding="utf-8")
         return f"Report saved to {path}"
     except Exception as e:
@@ -59,7 +71,7 @@ def web_search(query: str) -> str:
         # number, title, URL, snippet
         for i, r in enumerate(results, 1):
             formatted.append(
-                f"{i}. {r['title']}\n   URL: {r['href']}\n   {r['body']}"
+                f"{i}. {r.get('title', '')}\n   URL: {r.get('href', '')}\n   {r.get('body', '')}"
             )
         return "\n\n".join(formatted)
     except Exception as e:
@@ -88,7 +100,8 @@ def read_url(url: str) -> str:
     """Fetch the main text of a web page (use after web_search to read it in full)."""
     try:
         # download the page, then extract only the main text (no menus/ads)
-        downloaded = trafilatura.fetch_url(url)
+        # (explicit timeout so a slow/hanging page can't stall the agent loop)
+        downloaded = trafilatura.fetch_url(url, config=_fetch_config)
         if not downloaded:
             return f"Could not fetch the page: {url}"
         text = trafilatura.extract(downloaded)
