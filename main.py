@@ -42,6 +42,12 @@ def main():
             print(f"\n⚠️  Agent stopped: {e}")
             continue
 
+        # the Anthropic API rejects messages with empty content, so a truncated
+        # (e.g. max_tokens) response with no text must not be stored as-is —
+        # that would permanently break every future call in this session
+        if not answer:
+            answer = "(agent stopped without a final answer — try rephrasing or asking again)"
+
         # keep the model's final answer in the history too,
         # otherwise it won't remember what it replied
         conversation.append({"role": "assistant", "content": answer})

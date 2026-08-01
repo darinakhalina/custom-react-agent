@@ -51,19 +51,23 @@ def run_agent(conversation: list) -> str:
             func = TOOL_REGISTRY.get(block.name)  # name from the schema -> our function
             if func is None:
                 output = f"Unknown tool: {block.name}"  # typo protection, don't crash
+                is_error = True
             else:
                 try:
                     output = func(**block.input)  # run the real Python function
+                    is_error = False
                 except Exception as e:
-                    # bad arguments from the model must not crash the agent —
+                    # bad arguments or a failing tool must not crash the agent —
                     # return the error so it can retry differently
                     output = f"Tool {block.name} failed: {e}"
+                    is_error = True
             preview = output[:120] + ("..." if len(output) > 120 else "")
             print(f"📎 Result: {preview}\n")
             results.append({
                 "type": "tool_result",
                 "tool_use_id": block.id,  # which request this answers
                 "content": output,
+                "is_error": is_error,  # lets the model tell a real result from a failure
             })
 
         # hand the results back to the model on the next loop iteration
